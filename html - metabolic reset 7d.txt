@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metabolic Reset 7D</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Importmap for React and Dependencies -->
+    <script type="importmap">
+        {
+            "imports": {
+                "react": "https://esm.sh/react@18.2.0",
+                "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+                "lucide-react": "https://esm.sh/lucide-react@0.344.0",
+                "recharts": "https://esm.sh/recharts@2.12.2?deps=react@18.2.0,react-dom@18.2.0",
+                "clsx": "https://esm.sh/clsx@2.1.0",
+                "tailwind-merge": "https://esm.sh/tailwind-merge@2.2.1",
+                "firebase/app": "https://esm.sh/firebase@10.8.0/app",
+                "firebase/auth": "https://esm.sh/firebase@10.8.0/auth",
+                "firebase/firestore": "https://esm.sh/firebase@10.8.0/firestore"
+            }
+        }
+    </script>
+
+    <!-- Babel for in-browser JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Global Styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap');
+        
+        :root {
+            --font-serif: 'Cormorant Garamond', serif;
+            --font-sans: 'Inter', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: #FAF9F6;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .font-serif { font-family: var(--font-serif); }
+        .font-sans { font-family: var(--font-sans); }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            border-radius: 1rem;
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            border: 0;
+        }
+
+        .wave-fill {
+            transition: height 4000ms ease-in-out;
+        }
+        
+        .reflection-glow {
+            background: linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, transparent 100%);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { initializeApp } from 'firebase/app';
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+        import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+        import { 
+            Home, PlayCircle, FileText, ClipboardCheck, LayoutDashboard, Sparkles, Flame,
+            MessageCircle, User, ChevronRight, CheckCircle2, Droplets, Zap, Plus, Minus,
+            Bell, Menu, ArrowRight, Heart, LogOut, Book, CalendarCheck, Dumbbell, X,
+            ShieldAlert, Brain, RotateCcw, Wind, Volume2, VolumeX, Timer, Check, Send,
+            ArrowLeft, Save, Target, Scale, Mail
+        } from 'lucide-react';
+        import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+        import { clsx } from 'clsx';
+        import { twMerge } from 'tailwind-merge';
+
+        function cn(...inputs) {
+            return twMerge(clsx(inputs));
+        }
+
+        const GoogleIcon = () => (
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+        );
+
+        const LogoSVG = ({ className }) => (
+            <svg viewBox="0 0 400 400" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M200 50 A 150 150 0 1 1 50 200" stroke="url(#grad_arrow)" strokeWidth="20" strokeLinecap="round" />
+                <path d="M185 25 L235 50 L185 75 Z" fill="#FCA5A5" />
+                <path d="M160 120 C 160 120 100 180 100 240 C 100 295 145 340 200 340 C 255 340 300 295 300 240 C 300 190 250 140 200 140 Z" fill="url(#grad_flame)" />
+                <path d="M160 340 C 130 340 115 310 115 280 C 115 240 160 200 160 200 C 160 200 180 240 180 270 C 180 300 165 340 160 340 Z" fill="#FFFFFF" opacity="0.4" />
+                <text x="210" y="300" fontFamily="sans-serif" fontWeight="900" fontSize="120" fill="#FDBA74">7D</text>
+                <path d="M120 140 L125 150 L135 155 L125 160 L120 170 L115 160 L105 155 L115 150 Z" fill="#FDBA74" opacity="0.8"/>
+                <path d="M260 110 L264 118 L272 122 L264 126 L260 134 L256 126 L248 122 L256 118 Z" fill="#FDBA74" opacity="0.8"/>
+                <path d="M140 200 L142 205 L147 207 L142 209 L140 214 L138 209 L133 207 L138 205 Z" fill="#FDBA74" opacity="0.8"/>
+                <defs>
+                    <linearGradient id="grad_arrow" x1="50" y1="50" x2="350" y2="350" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stopColor="#FDBA74" />
+                        <stop offset="100%" stopColor="#FCA5A5" />
+                    </linearGradient>
+                    <linearGradient id="grad_flame" x1="100" y1="120" x2="300" y2="340" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stopColor="#FCD34D" />
+                        <stop offset="100%" stopColor="#F97316" />
+                    </linearGradient>
+                </defs>
+            </svg>
+        );
+
+        // --- FIREBASE INIT ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            // Insira a sua configuração real do Firebase aqui se alojar externamente
+            apiKey: "dummy", projectId: "dummy"
+        };
+        
+        let appInstance, auth, db;
+        try {
+            appInstance = initializeApp(firebaseConfig);
+            auth = getAuth(appInstance);
+            db = getFirestore(appInstance);
+        } catch (e) {
+            console.warn("Aviso: Firebase não configurado neste ambiente externo.");
+        }
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'metabolic-reset-app';
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('home');
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [userName, setUserName] = useState('');
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [selectedVideo, setSelectedVideo] = useState(null);
+            
+            // Account States
+            const [age, setAge] = useState('');
+            const [goal, setGoal] = useState('');
+            const [isSavingAccount, setIsSavingAccount] = useState(false);
+            const [isAccountSaved, setIsAccountSaved] = useState(false);
+
+            // Firebase Auth & Sync States
+            const [authUser, setAuthUser] = useState(null);
+            const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+            // Tracker & Protocol States
+            const [trackerData, setTrackerData] = useState({});
+            const [unlockedDay, setUnlockedDay] = useState(1);
+            const [selectedTrackerDay, setSelectedTrackerDay] = useState(1);
+            const [dailyNotes, setDailyNotes] = useState('');
+            const [showSaved, setShowSaved] = useState(false);
+            const [completedLessons, setCompletedLessons] = useState([]);
+            const [waterIntake, setWaterIntake] = useState(0);
+            const [weight, setWeight] = useState(65.5);
+
+            // Reset Emocional States
+            const [resetStep, setResetStep] = useState('home'); 
+            const [resetTimeLeft, setResetTimeLeft] = useState(180);
+            const [resetVictories, setResetVictories] = useState(0);
+            const [quoteIndex, setQuoteIndex] = useState(0);
+            const [breathStatus, setBreathStatus] = useState('Inspire');
+            const [isMuted, setIsMuted] = useState(false);
+            const audioRef = useRef(null);
+
+            // Support Form States
+            const [supportSubject, setSupportSubject] = useState('');
+            const [supportMessage, setSupportMessage] = useState('');
+            const [isSendingSupport, setIsSendingSupport] = useState(false);
+            const [isSupportSent, setIsSupportSent] = useState(false);
+
+            const protocolTasks = [
+                { id: 'shot', section: 'MANHÃ', title: 'Shot Matinal', desc: '500ml água morna + 1 pitada de sal integral + suco de ½ limão' },
+                { id: 'jejum', section: 'MANHÃ', title: 'Jejum 14–16h concluído', desc: 'Contado da última refeição de ontem até agora' },
+                { id: 'cafe', section: 'REFEIÇÕES', title: 'Café da manhã com proteína', desc: 'Ex: ovos, frango desfiado, queijo' },
+                { id: 'almoco', section: 'REFEIÇÕES', title: 'Almoço com proteína', desc: 'Ex: carne grelhada, frango, peixe' },
+                { id: 'jantar', section: 'REFEIÇÕES', title: 'Jantar com proteína', desc: 'Ex: hambúrguer caseiro, peixe, ovo' },
+                { id: 'jantar_cedo', section: 'NOITE', title: 'Jantou até as 20h', desc: 'Regra 3D: jantar 3h antes de dormir' },
+                { id: 'vinagre', section: 'NOITE', title: 'Vinagre de maçã no jantar', desc: '2 colheres diluídas em água ou na salada' },
+                { id: 'reset_emocional', section: 'NOITE', title: 'Reset Emocional', desc: 'Realizou a pausa de serenidade no app' },
+                { id: 'sono', section: 'NOITE', title: 'Higiene do sono', desc: 'Sem telas 30 min antes de dormir, ambiente escuro' },
+                { id: 'ativacao_corporal', section: 'EXTRAS (TURBO)', title: 'Ativação Corporal', desc: 'Programa de ativação de 15 minutos em casa' },
+                { id: 'sem_carbo', section: 'EXTRAS (TURBO)', title: 'Sem carboidratos refinados', desc: 'Evitou arroz, pão e macarrão hoje (bônus)' },
+            ];
+
+            const quotes = [
+                "Sinta o ar renovando as suas células agora.",
+                "Esta vontade é apenas uma nuvem passageira.",
+                "Você está no comando do seu corpo e da sua paz.",
+                "Cada respiração profunda desliga um gatilho de stress.",
+                "Nutra a sua alma com calma, não com ansiedade.",
+                "O Reset está a acontecer. O seu metabolismo agradece."
+            ];
+
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            // --- LOGIC ---
+            useEffect(() => {
+                const saved = localStorage.getItem('metabolic_reset_v3');
+                if (saved) {
+                    try {
+                        const p = JSON.parse(saved);
+                        setWaterIntake(p.water || 0);
+                        setWeight(p.weight || 65.5);
+                        setCompletedLessons(p.lessons || []);
+                        setUserName(p.name || '');
+                        setAge(p.age || '');
+                        setGoal(p.goal || '');
+                        if (p.name) setIsLoggedIn(true);
+                    } catch(e) {
+                        console.error("Local storage error", e);
+                    }
+                }
+                const savedVictories = localStorage.getItem('metabolic_reset_7d_victories');
+                if (savedVictories) setResetVictories(parseInt(savedVictories));
+
+                const initAuth = async () => {
+                    if(!auth) return;
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (e) {
+                        console.error("Erro na autenticação:", e);
+                    }
+                };
+                initAuth();
+                
+                if(auth) {
+                    const unsubscribe = onAuthStateChanged(auth, setAuthUser);
+                    return () => unsubscribe();
+                }
+            }, []);
+
+            useEffect(() => {
+                localStorage.setItem('metabolic_reset_v3', JSON.stringify({
+                    water: waterIntake, weight: weight, lessons: completedLessons, name: userName, age: age, goal: goal
+                }));
+            }, [waterIntake, weight, completedLessons, userName, age, goal]);
+
+            useEffect(() => {
+                if (!authUser || !isLoggedIn || !email || !db) return;
+                
+                const loadData = async () => {
+                    const safeEmail = email.replace(/[@.]/g, '_');
+                    const docRef = doc(db, 'artifacts', appId, 'users', authUser.uid, 'protocol', safeEmail);
+                    try {
+                        const docSnap = await getDoc(docRef);
+                        if (docSnap.exists()) {
+                            const d = docSnap.data();
+                            setCompletedLessons(d.lessons || []);
+                            setResetVictories(d.victories || 0);
+                            setUserName(d.name || userName);
+                            setAge(d.age || '');
+                            setGoal(d.goal || '');
+                            setTrackerData(d.trackerData || {});
+                            setUnlockedDay(d.unlockedDay || 1);
+                        }
+                        setIsDataLoaded(true);
+                    } catch (e) {
+                        console.error("Erro ao carregar dados da nuvem:", e);
+                        setIsDataLoaded(true); 
+                    }
+                };
+                loadData();
+            }, [isLoggedIn, authUser, email]);
+
+            useEffect(() => {
+                if (!authUser || !isLoggedIn || !email || !isDataLoaded || !db) return;
+                
+                const saveData = async () => {
+                    const safeEmail = email.replace(/[@.]/g, '_');
+                    const docRef = doc(db, 'artifacts', appId, 'users', authUser.uid, 'protocol', safeEmail);
+                    try {
+                        await setDoc(docRef, {
+                            lessons: completedLessons,
+                            victories: resetVictories,
+                            name: userName,
+                            email: email,
+                            age: age,
+                            goal: goal,
+                            trackerData: trackerData,
+                            unlockedDay: unlockedDay,
+                            updatedAt: new Date().toISOString()
+                        }, { merge: true });
+                    } catch (e) {
+                        console.error("Erro ao salvar na nuvem:", e);
+                    }
+                };
+                
+                const timeoutId = setTimeout(() => { saveData(); }, 1000);
+                return () => clearTimeout(timeoutId);
+            }, [completedLessons, resetVictories, userName, age, goal, trackerData, unlockedDay, isLoggedIn, isDataLoaded, authUser, email]);
+
+            useEffect(() => {
+                setDailyNotes(trackerData[selectedTrackerDay]?.notes || "");
+            }, [selectedTrackerDay, trackerData]);
+
+            useEffect(() => {
+                let maxUnlocked = 1;
+                for (let i = 1; i <= 7; i++) {
+                    const dayTasks = trackerData[i]?.tasks || {};
+                    const completedCount = Object.keys(dayTasks).filter(k => dayTasks[k]).length;
+                    if (completedCount === protocolTasks.length) {
+                        maxUnlocked = Math.max(maxUnlocked, i + 1);
+                    } else {
+                        break;
+                    }
+                }
+                if (maxUnlocked > 7) maxUnlocked = 7;
+                if (maxUnlocked > unlockedDay) {
+                    setUnlockedDay(maxUnlocked);
+                }
+            }, [trackerData]);
+
+            const handleToggleTask = (taskId) => {
+                setTrackerData(prev => {
+                    const currentDayData = prev[selectedTrackerDay] || { tasks: {} };
+                    const isCurrentlyChecked = !!currentDayData.tasks[taskId];
+                    return {
+                        ...prev,
+                        [selectedTrackerDay]: {
+                            ...currentDayData,
+                            tasks: {
+                                ...currentDayData.tasks,
+                                [taskId]: !isCurrentlyChecked
+                            }
+                        }
+                    };
+                });
+            };
+
+            const handleSaveNotes = () => {
+                setTrackerData(prev => ({
+                    ...prev,
+                    [selectedTrackerDay]: {
+                        ...(prev[selectedTrackerDay] || { tasks: {} }),
+                        notes: dailyNotes
+                    }
+                }));
+                setShowSaved(true);
+                setTimeout(() => setShowSaved(false), 2000);
+            };
+
+            useEffect(() => {
+                audioRef.current = new Audio('https://assets.mixkit.co/music/preview/mixkit-meditation-soft-ambience-135.mp3');
+                audioRef.current.loop = true;
+            }, []);
+
+            useEffect(() => {
+                if (activeTab !== 'reset' && resetStep === 'active') setResetStep('paused');
+            }, [activeTab, resetStep]);
+
+            useEffect(() => {
+                if (!audioRef.current) return;
+                if (activeTab === 'reset' && resetStep === 'active' && !isMuted) {
+                    audioRef.current.play().catch(() => {});
+                } else {
+                    audioRef.current.pause();
+                }
+            }, [activeTab, resetStep, isMuted]);
+
+            useEffect(() => {
+                let timer;
+                if (activeTab === 'reset' && resetStep === 'active' && resetTimeLeft > 0) {
+                    timer = setInterval(() => {
+                        setResetTimeLeft(prev => {
+                            const newTime = prev - 1;
+                            const cycleTime = 12 - (newTime % 12);
+                            if (cycleTime <= 4) setBreathStatus('Inspire');
+                            else if (cycleTime <= 8) setBreathStatus('Segure');
+                            else setBreathStatus('Expire');
+                            if (newTime % 30 === 0) setQuoteIndex(q => (q + 1) % quotes.length);
+                            return newTime;
+                        });
+                    }, 1000);
+                } else if (resetTimeLeft === 0 && resetStep === 'active') {
+                    const newVictories = resetVictories + 1;
+                    setResetVictories(newVictories);
+                    localStorage.setItem('metabolic_reset_7d_victories', newVictories.toString());
+                    setResetStep('success');
+                }
+                return () => clearInterval(timer);
+            }, [activeTab, resetStep, resetTimeLeft, resetVictories]);
+
+            const toggleLesson = (id) => {
+                setCompletedLessons(prev => prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]);
+            };
+
+            const roteiroAulas = [
+                { id: 'aula1', title: 'Aula 01 - Boas vindas', icon: PlayCircle, type: 'video', videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ' },
+                { id: 'diag', title: 'Diagnóstico', icon: ClipboardCheck, type: 'action' },
+                { id: 'pdf', title: 'pdf Metabolic Reset 7D', icon: FileText, type: 'pdf' },
+                { id: 'dash', title: 'Nosso dashboard de acompanhamento diário', icon: LayoutDashboard, type: 'tool' },
+                { id: 'ritual', title: 'Ritual de Desligamento Emocional', icon: Sparkles, type: 'reset_tool' },
+                { id: 'ativacao', title: 'Programa de ativação corporal de 15 minutos', icon: Flame, type: 'video', videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ' },
+            ];
+
+            const chartData = [
+                { day: 'Seg', weight: 67.2 }, 
+                { day: 'Ter', weight: 66.8 }, 
+                { day: 'Qua', weight: 66.1 }, 
+                { day: 'Qui', weight: 65.8 }, 
+                { day: 'Sex', weight: weight },
+            ];
+
+            const handleSendSupport = () => {
+                if (!supportSubject || !supportMessage) return;
+                setIsSendingSupport(true);
+                setTimeout(() => {
+                    setIsSendingSupport(false);
+                    setIsSupportSent(true);
+                    setSupportSubject('');
+                    setSupportMessage('');
+                    setTimeout(() => setIsSupportSent(false), 3000);
+                }, 1500);
+            };
+
+            const handleSaveAccount = () => {
+                if (!userName) return;
+                setIsSavingAccount(true);
+                setTimeout(() => {
+                    setIsSavingAccount(false);
+                    setIsAccountSaved(true);
+                    setTimeout(() => setIsAccountSaved(false), 2500);
+                }, 1000);
+            };
+
+            const handleEmailLogin = () => {
+                if (email && password) {
+                    const prefix = email.split('@')[0];
+                    const name = prefix.charAt(0).toUpperCase() + prefix.slice(1);
+                    if(!userName) setUserName(name);
+                    setIsLoggedIn(true);
+                }
+            };
+
+            const handleGoogleLogin = () => {
+                const defaultEmail = 'alunavip@gmail.com';
+                setEmail(defaultEmail);
+                if(!userName) setUserName('Aluna VIP');
+                setIsLoggedIn(true);
+            };
+
+            // --- VIEWS ---
+            
+            const renderResetEmocionalView = () => (
+                <div className="flex flex-col min-h-[500px] w-full animate-fade-in relative px-2">
+                    <header className="flex justify-between items-center mb-6">
+                        <div className="flex items-center gap-2">
+                            <div className="bg-rose-400 p-2 rounded-xl shadow-sm"><Sparkles size={14} className="text-white" /></div>
+                            <span className="text-[10px] font-black text-rose-900 tracking-[0.2em] uppercase">Pausa Terapêutica</span>
+                        </div>
+                        <button onClick={() => setIsMuted(!isMuted)} className="p-2 rounded-full bg-white border border-rose-100 text-rose-300 transition-colors hover:bg-rose-50">
+                            {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                        </button>
+                    </header>
+
+                    {resetStep === 'home' && (
+                        <div className="text-center space-y-8 animate-fade-in py-6">
+                            <div className="relative inline-block mx-auto">
+                                <div className="absolute -inset-10 bg-rose-100 rounded-full blur-3xl opacity-30"></div>
+                                <div className="relative bg-white w-24 h-24 rounded-full flex items-center justify-center shadow-sm border border-rose-50 mx-auto">
+                                    <Heart size={40} className="text-rose-200 fill-rose-50" />
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <h1 className="text-3xl font-serif font-bold text-slate-800 italic">Sinta a sua respiração</h1>
+                                <p className="text-slate-400 text-sm px-8 leading-relaxed font-light">Deixe a onda guiar o seu ritmo. O Metabolic Reset começa com a paz da sua mente.</p>
+                            </div>
+                            <button onClick={() => { setResetTimeLeft(180); setResetStep('active'); }} className="w-full bg-slate-900 text-white p-5 rounded-2xl font-bold text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-slate-800">
+                                Iniciar Reset Profundo
+                            </button>
+                        </div>
+                    )}
+
+                    {resetStep === 'paused' && (
+                        <div className="text-center space-y-8 animate-fade-in py-6">
+                            <div className="relative inline-block mx-auto">
+                                <div className="relative bg-white w-24 h-24 rounded-full flex items-center justify-center shadow-sm border border-slate-100 mx-auto">
+                                    <Timer size={40} className="text-slate-300" />
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <h1 className="text-3xl font-serif font-bold text-slate-800 italic">Sessão Pausada</h1>
+                                <p className="text-slate-400 text-sm px-8 leading-relaxed font-light">
+                                    Faltam <span className="font-semibold text-rose-400">{formatTime(resetTimeLeft)}</span> para completar a sua sessão. Deseja continuar?
+                                </p>
+                            </div>
+                            <div className="flex flex-col gap-4">
+                                <button onClick={() => setResetStep('active')} className="w-full bg-slate-900 text-white p-5 rounded-2xl font-bold text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-slate-800">
+                                    Continuar
+                                </button>
+                                <button onClick={() => { setResetTimeLeft(180); setResetStep('active'); }} className="w-full bg-white text-rose-400 border border-rose-100 p-5 rounded-2xl font-bold text-xs uppercase tracking-widest shadow-sm active:scale-95 transition-all hover:bg-rose-50">
+                                    Reiniciar do Zero
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {resetStep === 'active' && (
+                        <div className="flex flex-col items-center space-y-10 animate-fade-in">
+                            <div className="text-center space-y-3">
+                                <h2 className={cn("text-4xl font-serif font-bold transition-all duration-1000 tracking-tight italic", breathStatus === 'Segure' ? "text-rose-300" : "text-slate-700")}>
+                                    {breathStatus}
+                                </h2>
+                                <div className="flex items-center justify-center gap-2 text-slate-300 font-mono text-sm">
+                                    <Timer size={14} /> <span>{formatTime(resetTimeLeft)}</span>
+                                </div>
+                            </div>
+
+                            <div className="relative w-48 h-80 bg-white rounded-[4rem] shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)] border border-slate-100 flex items-end overflow-hidden">
+                                <div className={cn("wave-fill w-full bg-gradient-to-t from-rose-200 via-rose-100 to-rose-50 opacity-60 rounded-t-[2rem]")} style={{ height: breathStatus === 'Inspire' ? '100%' : breathStatus === 'Segure' ? '100%' : '15%' }}>
+                                    <div className="w-full h-2 bg-white/40 blur-sm"></div>
+                                </div>
+                                <div className="absolute inset-0 reflection-glow pointer-events-none rounded-[4rem] border-r border-white/40"></div>
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <div className="bg-white/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/50 shadow-sm">
+                                        <span className="font-mono text-slate-800 text-lg font-medium">{formatTime(resetTimeLeft)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="w-full bg-white/50 p-6 rounded-[2rem] border border-white min-h-[100px] text-center italic text-slate-600 font-serif text-lg leading-relaxed flex items-center justify-center px-8 shadow-sm">
+                                "{quotes[quoteIndex]}"
+                            </div>
+                        </div>
+                    )}
+
+                    {resetStep === 'success' && (
+                        <div className="text-center space-y-8 animate-fade-in">
+                            <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-50 space-y-8 relative overflow-hidden">
+                                <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto">
+                                    <CheckCircle2 size={32} className="text-rose-400" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h2 className="text-2xl font-serif font-bold text-slate-800">Momento de Equilíbrio</h2>
+                                    <p className="text-slate-400 text-sm leading-relaxed px-4 font-light">
+                                        Você escolheu cuidar de si. Sinta como o seu corpo reage positivamente a este estado de presença.
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={() => setResetStep('home')} className="w-full py-4 text-slate-300 font-bold text-[10px] flex items-center justify-center gap-2 tracking-[0.4em] hover:text-rose-400 transition-colors uppercase">
+                                <RotateCcw size={14} /> Outra Sessão
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+
+            const renderHomeView = () => (
+                <div className="space-y-6 animate-fade-in pb-24">
+                    <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50 relative overflow-hidden">
+                        <div className="absolute top-[-10px] right-[-10px] opacity-[0.05]"><Zap size={100} className="text-rose-500" /></div>
+                        <div className="relative z-10">
+                            <span className="text-[10px] text-rose-500 font-bold uppercase tracking-widest bg-rose-50 px-3 py-1 rounded-full border border-rose-100">Seja bem vinda</span>
+                            <h2 className="font-serif text-3xl text-slate-800 mt-4 mb-2">{userName || 'Aluna'}</h2>
+                            <p className="text-slate-400 text-xs font-light leading-relaxed mb-6 italic">Seu reset metabólico começa agora.</p>
+                            <button onClick={() => setActiveTab('aulas')} className="w-full bg-slate-900 text-white py-4 rounded-2xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg">Ver Minha Jornada <ArrowRight size={14} /></button>
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        <h3 className="text-sm font-bold text-slate-800 px-2">Acesso Rápido</h3>
+                        <div className="flex flex-col gap-3">
+                            {[
+                                { id: 'aulas', title: 'Protocolo', desc: 'Continue sua jornada de reset metabólico', icon: Book, color: 'bg-rose-50 text-rose-400' },
+                                { id: 'tracker', title: 'Tracker Diário', desc: 'Registre seu progresso do Dia 1', icon: CalendarCheck, color: 'bg-orange-50 text-orange-400' },
+                                { id: 'reset', title: 'Reset Emocional', desc: 'Sua pausa diária de serenidade', icon: Heart, color: 'bg-rose-50 text-rose-300' },
+                                { id: 'aulas', title: 'Ativação Corporal', desc: 'Ativação de 15 minutos em casa', icon: Dumbbell, color: 'bg-orange-50 text-orange-200' }
+                            ].map((item, idx) => (
+                                <button key={idx} onClick={() => setActiveTab(item.id)} className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm border border-slate-50 text-left group transition-all hover:scale-[1.01]">
+                                    <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0", item.color)}><item.icon size={22} strokeWidth={1.5} /></div>
+                                    <div className="flex-1"><h4 className="text-sm font-semibold text-slate-800 leading-tight">{item.title}</h4><p className="text-[11px] text-slate-400 font-light">{item.desc}</p></div>
+                                    <ChevronRight size={16} className="text-slate-200" />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const renderAulasView = () => (
+                <div className="space-y-6 animate-fade-in pb-24">
+                    <header className="px-2"><h2 className="font-serif text-3xl text-slate-800">Roteiro das aulas</h2></header>
+                    {selectedVideo && (
+                        <div className="animate-fade-in mb-6 bg-white p-2 rounded-[2rem] shadow-xl border border-rose-100">
+                            <div className="flex justify-between items-center p-4">
+                                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-tight">{selectedVideo.title}</h4>
+                                <button onClick={() => setSelectedVideo(null)} className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400"><X size={16} /></button>
+                            </div>
+                            <div className="video-container"><iframe src={selectedVideo.url} title="Video Player" allowFullScreen></iframe></div>
+                            <div className="p-4"><button onClick={() => { toggleLesson(selectedVideo.id); setSelectedVideo(null); }} className="w-full bg-emerald-500 text-white py-3 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-2">Concluir Aula <CheckCircle2 size={16} /></button></div>
+                        </div>
+                    )}
+                    <div className="space-y-3">
+                        {roteiroAulas.map((aula) => (
+                            <div key={aula.id} onClick={() => { if(aula.id === 'dash') setActiveTab('tracker'); else if(aula.type === 'video') setSelectedVideo({id: aula.id, title: aula.title, url: aula.videoUrl}); else if(aula.type === 'reset_tool') setActiveTab('reset'); else toggleLesson(aula.id); }} className={cn("flex items-center justify-between p-5 rounded-[1.8rem] border transition-all cursor-pointer", completedLessons.includes(aula.id) ? "bg-emerald-50/50 border-emerald-100" : "bg-white border-slate-100 hover:border-rose-100")}>
+                                <div className="flex items-center gap-4">
+                                    <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", completedLessons.includes(aula.id) ? "bg-white text-emerald-500" : "bg-slate-50 text-slate-400")}><aula.icon size={24} strokeWidth={1.5} /></div>
+                                    <div className="flex flex-col"><span className="text-sm font-medium">{aula.title}</span><span className="text-[10px] text-slate-300 uppercase font-bold tracking-tighter mt-1">{aula.type}</span></div>
+                                </div>
+                                {completedLessons.includes(aula.id) ? <CheckCircle2 size={16} className="text-emerald-500" /> : <ChevronRight size={18} className="text-slate-200" />}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            const renderTrackerView = () => {
+                const currentDayTasks = trackerData[selectedTrackerDay]?.tasks || {};
+                const completedCount = Object.keys(currentDayTasks).filter(k => currentDayTasks[k]).length;
+                const progressPercent = (completedCount / protocolTasks.length) * 100;
+
+                return (
+                    <div className="space-y-6 animate-fade-in pb-24">
+                        <header className="px-2">
+                            <h2 className="font-serif text-3xl text-slate-800">Tracker Diário</h2>
+                            <p className="text-slate-500 text-sm mt-1 leading-snug">Marque cada hábito do protocolo conforme for cumprindo</p>
+                        </header>
+
+                        <div className="flex gap-3 overflow-x-auto pb-2 pt-1 px-2 no-scrollbar">
+                            {[1, 2, 3, 4, 5, 6, 7].map(day => {
+                                const isSelected = selectedTrackerDay === day;
+                                const isUnlocked = day <= unlockedDay;
+                                const isCompleted = isUnlocked && trackerData[day] && Object.keys(trackerData[day].tasks || {}).filter(k => trackerData[day].tasks[k]).length === protocolTasks.length;
+                                
+                                return (
+                                    <button
+                                        key={day}
+                                        onClick={() => { if (isUnlocked) setSelectedTrackerDay(day); }}
+                                        className={cn(
+                                            "flex flex-col items-center justify-center p-3 min-w-[4rem] h-[5rem] rounded-[1.2rem] transition-all shadow-sm",
+                                            isSelected ? "bg-[#B45D6A] text-white shadow-md scale-105" :
+                                            isCompleted ? "bg-[#F5EBE9] text-[#B45D6A] border border-[#E8D4D5]" :
+                                            isUnlocked ? "bg-white text-slate-500 border border-slate-100 hover:bg-slate-50" :
+                                            "bg-transparent text-slate-300 border border-slate-100 opacity-50 cursor-not-allowed"
+                                        )}
+                                    >
+                                        <span className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-80">Dia</span>
+                                        <span className="text-xl font-serif font-bold leading-none mb-2">{day}</span>
+                                        {isCompleted ? <Check size={14} className={isSelected ? "text-white" : "text-[#B45D6A]"} /> :
+                                         isSelected ? <div className="w-1.5 h-1.5 rounded-full bg-white"></div> :
+                                         <div className="w-2 h-2 rounded-full border-2 border-current opacity-40"></div>}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <div className="mx-2 mt-2 border border-slate-100 bg-white p-5 rounded-[1.5rem] shadow-sm">
+                            <div className="flex justify-between items-end mb-3">
+                                <span className="text-sm font-bold text-slate-700">Dia {selectedTrackerDay} — Progresso</span>
+                                <span className="text-sm font-bold text-[#B45D6A]">{completedCount}/{protocolTasks.length}</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-[#B45D6A] transition-all duration-500 ease-out" style={{ width: `${progressPercent}%` }}></div>
+                            </div>
+                        </div>
+
+                        <div className="px-2 space-y-8 mt-8">
+                            {[
+                                { key: 'MANHÃ', label: '🌅 MANHÃ', color: 'text-amber-500' },
+                                { key: 'REFEIÇÕES', label: '🍽️ REFEIÇÕES', color: 'text-emerald-600' },
+                                { key: 'NOITE', label: '🌙 NOITE', color: 'text-indigo-600' },
+                                { key: 'EXTRAS (TURBO)', label: '⚡ EXTRAS (TURBO)', color: 'text-rose-500' },
+                            ].map(sec => {
+                                const sectionTasks = protocolTasks.filter(t => t.section === sec.key);
+                                if (sectionTasks.length === 0) return null;
+
+                                return (
+                                    <div key={sec.key}>
+                                        <h4 className={cn("text-[11px] font-black uppercase tracking-widest mb-3", sec.color)}>{sec.label}</h4>
+                                        <div className="flex flex-col gap-3">
+                                            {sectionTasks.map(task => {
+                                                const isChecked = !!currentDayTasks[task.id];
+                                                return (
+                                                    <div 
+                                                        key={task.id}
+                                                        onClick={() => handleToggleTask(task.id)}
+                                                        className={cn("flex items-start gap-4 p-4 rounded-[1.2rem] border transition-all cursor-pointer", isChecked ? "bg-[#FDF9F9] border-[#E8D4D5]" : "bg-white border-slate-100 hover:border-slate-200")}
+                                                    >
+                                                        <div className={cn("mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", isChecked ? "bg-[#B45D6A] border-[#B45D6A]" : "border-slate-200 bg-white")}>
+                                                            {isChecked && <Check size={14} className="text-white" strokeWidth={3} />}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <h5 className="text-[13px] font-semibold text-slate-800 leading-snug">{task.title}</h5>
+                                                            <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{task.desc}</p>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+
+                        <div className="px-2 mt-8 mb-4">
+                            <h4 className="text-[13px] font-bold text-slate-800 mb-3">Anotações do Dia</h4>
+                            <textarea
+                                value={dailyNotes}
+                                onChange={(e) => setDailyNotes(e.target.value)}
+                                placeholder="Como você está se sentindo? Teve dificuldades? Alguma vitória para registrar?"
+                                className="w-full p-5 bg-white border border-slate-100 rounded-[1.2rem] shadow-sm text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-rose-100 min-h-[120px] resize-none"
+                            ></textarea>
+                            <button onClick={handleSaveNotes} className="w-full bg-[#B45D6A] text-white py-4 rounded-xl font-bold text-sm shadow-md mt-4 active:scale-95 transition-all hover:bg-[#a35360]">
+                                {showSaved ? "Anotações Salvas!" : "Salvar Anotações"}
+                            </button>
+                        </div>
+                        
+                        <div className="mx-2 mt-10 p-7 rounded-[2.5rem] border border-slate-50 bg-white shadow-sm">
+                            <div className="flex justify-between items-start mb-6 px-1">
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Evolução Peso (kg)</p>
+                                <h3 className="text-3xl font-light text-slate-800">{weight}</h3>
+                            </div>
+                            <div className="bg-emerald-50 px-3 py-1 rounded-full"><span className="text-[10px] text-emerald-500 font-bold">-1.7kg</span></div>
+                            </div>
+                            <div className="h-44 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={chartData}>
+                                        <Line type="monotone" dataKey="weight" stroke="#F43F5E" strokeWidth={3} dot={{fill:'#F43F5E', stroke:'#fff', r:4}} activeDot={{r:6}}/>
+                                        <XAxis dataKey="day" hide/>
+                                        <YAxis hide domain={['dataMin - 0.5', 'dataMax + 0.5']}/>
+                                        <Tooltip contentStyle={{borderRadius:'16px', border:'none', boxShadow:'0 10px 25px rgba(0,0,0,0.05)'}}/>
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderAccountView = () => (
+                <div className="space-y-6 animate-fade-in pb-24 px-2">
+                    <header className="flex items-center gap-4 px-2">
+                        <button onClick={() => setActiveTab('profile')} className="p-3 bg-white rounded-full shadow-sm border border-slate-100 text-slate-500 hover:bg-slate-50 transition-colors">
+                        <ArrowLeft size={20} />
+                        </button>
+                        <div>
+                        <h2 className="font-serif text-3xl text-slate-800 font-bold">Minha Conta</h2>
+                        <p className="text-slate-500 text-xs mt-1">Seus dados pessoais</p>
+                        </div>
+                    </header>
+
+                    <div className="space-y-5 px-2 mt-6">
+                        <div className="space-y-2 text-left">
+                        <label className="text-[13px] font-bold text-slate-800 flex items-center gap-2"><User size={14} className="text-[#D38E9B]"/> Nome de Exibição</label>
+                        <input 
+                            type="text" value={userName} onChange={(e) => setUserName(e.target.value)}
+                            placeholder="Como quer ser chamada?" 
+                            className="w-full p-4 rounded-[1rem] border border-slate-200 bg-white shadow-sm outline-none text-sm text-slate-600 focus:ring-2 focus:ring-rose-100 focus:border-rose-300 transition-all"
+                        />
+                        </div>
+
+                        <div className="space-y-2 text-left">
+                        <label className="text-[13px] font-bold text-slate-800 flex items-center gap-2"><Mail size={14} className="text-[#D38E9B]"/> E-mail de Acesso</label>
+                        <input 
+                            type="email" value={email} disabled
+                            className="w-full p-4 rounded-[1rem] border border-slate-100 bg-slate-50 shadow-sm outline-none text-sm text-slate-400 cursor-not-allowed opacity-70"
+                        />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2 text-left">
+                            <label className="text-[13px] font-bold text-slate-800 flex items-center gap-2"><CalendarCheck size={14} className="text-[#D38E9B]"/> Idade</label>
+                            <input 
+                            type="number" value={age} onChange={(e) => setAge(e.target.value)}
+                            placeholder="Ex: 35" 
+                            className="w-full p-4 rounded-[1rem] border border-slate-200 bg-white shadow-sm outline-none text-sm text-slate-600 focus:ring-2 focus:ring-rose-100 focus:border-rose-300 transition-all"
+                            />
+                        </div>
+                        <div className="space-y-2 text-left">
+                            <label className="text-[13px] font-bold text-slate-800 flex items-center gap-2"><Scale size={14} className="text-[#D38E9B]"/> Peso (kg)</label>
+                            <input 
+                            type="number" value={weight} onChange={(e) => setWeight(parseFloat(e.target.value) || 0)}
+                            placeholder="Ex: 65.5" step="0.1"
+                            className="w-full p-4 rounded-[1rem] border border-slate-200 bg-white shadow-sm outline-none text-sm text-slate-600 focus:ring-2 focus:ring-rose-100 focus:border-rose-300 transition-all"
+                            />
+                        </div>
+                        </div>
+
+                        <div className="space-y-2 text-left">
+                        <label className="text-[13px] font-bold text-slate-800 flex items-center gap-2"><Target size={14} className="text-[#D38E9B]"/> Objetivo Principal</label>
+                        <select 
+                            value={goal} onChange={(e) => setGoal(e.target.value)}
+                            className="w-full p-4 rounded-[1rem] border border-slate-200 bg-white shadow-sm outline-none text-sm text-slate-600 focus:ring-2 focus:ring-rose-100 focus:border-rose-300 transition-all appearance-none"
+                        >
+                            <option value="">Selecione uma meta...</option>
+                            <option value="Emagrecimento">Emagrecimento Rápido</option>
+                            <option value="Reduzir Inchaço">Reduzir Inchaço / Retenção</option>
+                            <option value="Mais Energia">Mais Energia e Disposição</option>
+                            <option value="Reeducação">Reeducação Alimentar</option>
+                        </select>
+                        </div>
+
+                        <button 
+                        onClick={handleSaveAccount} disabled={isSavingAccount || !userName}
+                        className={cn(
+                            "w-full text-white py-4 rounded-xl font-bold text-sm shadow-md mt-6 transition-all flex items-center justify-center gap-2",
+                            isAccountSaved ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#D38E9B] hover:bg-[#c27c89] active:scale-95 disabled:opacity-50"
+                        )}
+                        >
+                        {isAccountSaved ? (<>Dados Salvos! <CheckCircle2 size={16} /></>) : isSavingAccount ? ("Salvando...") : (<><Save size={16} /> Salvar Informações</>)}
+                        </button>
+                    </div>
+                </div>
+            );
+
+            const renderSupportView = () => (
+                <div className="space-y-6 animate-fade-in pb-24 px-2">
+                    <header className="px-2">
+                        <h2 className="font-serif text-3xl text-slate-800 font-bold">Suporte</h2>
+                        <p className="text-slate-500 text-sm mt-1 leading-snug">Envie uma mensagem privada e retornaremos em breve</p>
+                    </header>
+
+                    <div className="space-y-5 px-2 mt-6">
+                        <div className="space-y-2 text-left">
+                        <label className="text-[13px] font-bold text-slate-800">Assunto</label>
+                        <input 
+                            type="text" value={supportSubject} onChange={(e) => setSupportSubject(e.target.value)}
+                            placeholder="Com o que você precisa de ajuda?" 
+                            className="w-full p-4 rounded-[1rem] border border-slate-200 bg-white shadow-sm outline-none text-sm text-slate-600 focus:ring-2 focus:ring-rose-100 focus:border-rose-300 transition-all"
+                        />
+                        </div>
+
+                        <div className="space-y-2 text-left">
+                        <label className="text-[13px] font-bold text-slate-800">Mensagem</label>
+                        <textarea 
+                            value={supportMessage} onChange={(e) => setSupportMessage(e.target.value)}
+                            placeholder="Descreva sua dúvida ou necessidade em detalhes..." 
+                            className="w-full p-4 rounded-[1rem] border border-slate-200 bg-white shadow-sm outline-none text-sm text-slate-600 focus:ring-2 focus:ring-rose-100 focus:border-rose-300 transition-all min-h-[160px] resize-none"
+                        />
+                        </div>
+
+                        <button 
+                        onClick={handleSendSupport} disabled={!supportSubject || !supportMessage || isSendingSupport}
+                        className={cn(
+                            "w-full text-white py-4 rounded-xl font-bold text-sm shadow-md mt-4 transition-all flex items-center justify-center gap-2",
+                            isSupportSent ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#D38E9B] hover:bg-[#c27c89] active:scale-95 disabled:opacity-50"
+                        )}
+                        >
+                        {isSupportSent ? (<>Mensagem Enviada! <CheckCircle2 size={16} /></>) : isSendingSupport ? ("Enviando...") : (<><Send size={16} /> Enviar Mensagem</>)}
+                        </button>
+                    </div>
+                </div>
+            );
+
+            const renderProfileView = () => (
+                <div className="space-y-8 animate-fade-in pb-24 flex flex-col items-center">
+                    <div className="pt-8 relative">
+                        <div className="w-32 h-32 rounded-[3rem] border-8 border-white shadow-xl bg-slate-100 overflow-hidden rotate-3"><img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop" className="w-full h-full object-cover" alt="Perfil" /></div>
+                        <div className="absolute bottom-6 right-0 w-8 h-8 bg-emerald-500 border-4 border-white rounded-full"></div>
+                    </div>
+                    <div className="text-center">
+                        <h3 className="font-serif text-3xl text-slate-800">{userName || 'Aluna VIP'}</h3>
+                        <p className="text-[10px] text-rose-400 font-bold uppercase tracking-[0.2em] mt-1 italic">Protocolo Metabolic Reset 7D</p>
+                    </div>
+                    <div className="w-full bg-white rounded-[2.5rem] border border-slate-50 overflow-hidden divide-y divide-slate-50">
+                        <div onClick={() => setActiveTab('account')} className="p-6 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center gap-4"><User size={18} className="text-slate-300"/><span className="text-sm font-light text-slate-600">Minha Conta</span></div>
+                        <ChevronRight size={14} className="text-slate-200"/>
+                        </div>
+                        <div className="p-6 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center gap-4"><Bell size={18} className="text-slate-300"/><span className="text-sm font-light text-slate-600">Notificações</span></div>
+                        <ChevronRight size={14} className="text-slate-200"/>
+                        </div>
+                        <div onClick={() => { 
+                            setIsLoggedIn(false); setIsDataLoaded(false); setUserName(''); setEmail(''); setPassword(''); 
+                            setAge(''); setGoal(''); setTrackerData({}); setUnlockedDay(1); setCompletedLessons([]); setResetVictories(0);
+                        }} className="p-6 flex items-center justify-between cursor-pointer hover:bg-rose-50 transition-colors">
+                        <div className="flex items-center gap-4"><LogOut size={18} className="text-rose-400"/><span className="text-sm font-medium text-rose-500">Sair do App</span></div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            if (!isLoggedIn) return (
+                <div className="flex flex-col items-center justify-center min-h-screen px-8 text-center bg-[#FAF9F6] w-full max-w-md mx-auto relative overflow-hidden">
+                    <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-rose-100 rounded-full blur-3xl opacity-40"></div>
+                    <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-rose-200 rounded-full blur-3xl opacity-40"></div>
+                    
+                    <div className="relative z-10 w-full animate-fade-in flex flex-col items-center">
+                        <div className="flex flex-col items-center mb-6 mt-2">
+                            <LogoSVG className="w-28 h-28 mb-4 drop-shadow-md" />
+                            <h1 className="font-sans text-4xl font-medium text-[#D38E9B] tracking-tight">Metabolic Reset</h1>
+                            <div className="flex items-center gap-4 my-2">
+                                <div className="h-[1px] w-12 bg-gradient-to-r from-transparent to-[#FDBA74]"></div>
+                                <span className="font-sans text-3xl font-bold text-[#FDBA74]">7D</span>
+                                <div className="h-[1px] w-12 bg-gradient-to-l from-transparent to-[#FDBA74]"></div>
+                            </div>
+                            <p className="text-[#FDBA74] text-[9px] uppercase tracking-[0.2em] mt-1 font-semibold">Reset Your Metabolism in Just 7 Days</p>
+                        </div>
+                        <p className="text-rose-400 font-medium tracking-[0.2em] text-[10px] uppercase mb-8 text-center">Acesso Exclusivo Alunas</p>
+
+                        <div className="w-full space-y-4">
+                            <div className="text-left space-y-1">
+                                <label className="text-[10px] uppercase font-bold text-slate-400 ml-2">E-mail</label>
+                                <input type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-4 rounded-2xl border border-slate-100 bg-white shadow-sm outline-none text-sm font-sans focus:ring-2 focus:ring-rose-100 transition-all" />
+                            </div>
+                            <div className="text-left space-y-1">
+                                <label className="text-[10px] uppercase font-bold text-slate-400 ml-2">Senha</label>
+                                <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-4 rounded-2xl border border-slate-100 bg-white shadow-sm outline-none text-sm font-sans focus:ring-2 focus:ring-rose-100 transition-all" />
+                            </div>
+                            <div className="flex justify-end px-2">
+                                <span className="text-[10px] text-slate-400 font-medium hover:text-rose-400 cursor-pointer transition-colors">Esqueceu a senha?</span>
+                            </div>
+                            <button onClick={handleEmailLogin} disabled={!email || !password} className="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-xl transition-all active:scale-95 disabled:opacity-50 mt-2">
+                                Entrar
+                            </button>
+
+                            <div className="relative flex items-center py-4">
+                                <div className="flex-grow border-t border-slate-200"></div>
+                                <span className="flex-shrink-0 mx-4 text-slate-300 text-xs font-light">ou</span>
+                                <div className="flex-grow border-t border-slate-200"></div>
+                            </div>
+
+                            <button onClick={handleGoogleLogin} className="w-full bg-white text-slate-700 p-4 rounded-2xl font-medium text-sm border border-slate-100 shadow-sm transition-all active:scale-95 flex items-center justify-center gap-3 hover:bg-slate-50">
+                                <GoogleIcon /> Continuar com Google
+                            </button>
+                            
+                            <div className="pt-6">
+                                <p className="text-xs text-slate-400 font-light">Não tem uma conta? <span className="font-semibold text-rose-400 cursor-pointer hover:underline">Inscreva-se</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen bg-[#FAF9F6] flex flex-col font-sans max-w-md mx-auto relative no-scrollbar">
+                    <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50 bg-[#FAF9F6]/80 backdrop-blur-xl border-b border-slate-100/50 h-16 flex items-center justify-center px-7">
+                        <div className="flex items-center gap-2">
+                        <LogoSVG className="w-8 h-8 drop-shadow-sm" />
+                        <h1 className="font-sans text-xl font-medium text-[#D38E9B] tracking-tight">Metabolic Reset <span className="font-bold text-[#FDBA74]">7D</span></h1>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 px-3 pt-24 pb-12 overflow-y-auto no-scrollbar">
+                        {activeTab === 'home' && renderHomeView()}
+                        {activeTab === 'aulas' && renderAulasView()}
+                        {activeTab === 'tracker' && renderTrackerView()}
+                        {activeTab === 'reset' && renderResetEmocionalView()}
+                        {activeTab === 'support' && renderSupportView()}
+                        {activeTab === 'profile' && renderProfileView()}
+                        {activeTab === 'account' && renderAccountView()}
+                    </main>
+
+                    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/90 backdrop-blur-2xl border-t border-slate-100 z-50 px-6 py-4 flex items-center justify-around shadow-lg">
+                        {[
+                        { id: 'home', icon: Home, label: 'Início' },
+                        { id: 'aulas', icon: PlayCircle, label: 'Aulas' },
+                        { id: 'tracker', icon: LayoutDashboard, label: 'Diário' },
+                        { id: 'support', icon: MessageCircle, label: 'Suporte' },
+                        { id: 'profile', icon: User, label: 'Perfil' }
+                        ].map((item) => (
+                        <button key={item.id} onClick={() => setActiveTab(item.id)} className={cn("flex flex-col items-center gap-1.5 p-2 transition-all rounded-2xl relative", activeTab === item.id || (activeTab === 'reset' && item.id === 'home') ? "text-slate-900 scale-110" : "text-slate-300")}>
+                            <item.icon size={22} strokeWidth={2} />
+                        </button>
+                        ))}
+                    </nav>
+                </div>
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
